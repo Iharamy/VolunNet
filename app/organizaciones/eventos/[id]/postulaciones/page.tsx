@@ -56,7 +56,6 @@ export default function EventoPostulacionesPage() {
   const router = useRouter()
   const params = useParams()
   const eventId = params.id as string
-  
   const [event, setEvent] = useState<Event | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)

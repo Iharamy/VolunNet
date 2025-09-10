@@ -197,10 +197,10 @@ export default function HomePage() {
             <div className="relative mx-auto max-w-4xl">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-3xl transform rotate-1"></div>
               <div className="relative bg-white/80 backdrop-blur-sm shadow-xl rounded-3xl p-4 border border-white/50 overflow-hidden">
-                <img
-                  src="/placeholder.svg?height=500&width=900"
-                  alt="VolunNet Dashboard Preview"
-                  className="w-full h-auto rounded-2xl shadow-inner"
+               <img 
+               src="/img/portada.jpg"
+               alt="VolunNet Dashboard Preview"
+               className="w-full h-auto rounded-2xl shadow-inner"
                 />
                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
               </div>
@@ -534,7 +534,7 @@ export default function HomePage() {
           </div>
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 VolunNet - CUCEI. Todos los derechos reservados.</p>
+            <p>&copy;         2025 VolunNet - CUCEI. Todos los derechos reservados.💜 </p>
           </div>
         </div>
       </footer>

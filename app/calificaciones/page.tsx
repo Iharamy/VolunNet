@@ -7,23 +7,9 @@ import { RatingModal } from "@/components/RatingModal/RatingModal"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Star, Calendar, MapPin, Users } from "lucide-react"
+import { Star, Calendar, MapPin, Users, Heart, Home, Bell, LogOut, User, Settings } from "lucide-react"
 import Link from "next/link"
-
-interface Event {
-  id: string
-  title: string
-  description: string
-  organization_name: string
-  city: string
-  state: string
-  start_date: string
-  end_date?: string
-  max_volunteers: number
-  current_volunteers: number
-  category_name: string
-  status: string
-}
+import { motion } from "framer-motion"
 
 interface RatingPendingEvent {
   id: string
@@ -43,6 +29,45 @@ interface RatingPendingEvent {
   }
   status: string
   volunteerId: string
+}
+
+function UserMenu({ user }: { user: any }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-blue-600 font-bold shadow-md hover:scale-105 transition"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {user?.firstName?.[0] || 'M'}
+      </button>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+        >
+          <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
+            <div className="font-semibold text-gray-800 text-sm">{user?.firstName || 'María'} {user?.lastName || 'González'}</div>
+            <div className="text-xs text-gray-500">{user?.email || 'voluntario@volunnet.com'}</div>
+          </div>
+          <Link href="/perfil" className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">
+            <User className="h-4 w-4 text-gray-500" /> Perfil
+          </Link>
+          <Link href="/configuracion" className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">
+            <Settings className="h-4 w-4 text-gray-500" /> Configuración
+          </Link>
+          <div className="border-t border-gray-100 my-1" />
+          <button
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600"
+            onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/"; }}
+          >
+            <LogOut className="h-4 w-4" /> Cerrar sesión
+          </button>
+        </motion.div>
+      )}
+    </div>
+  )
 }
 
 export default function CalificacionesPage() {
@@ -65,7 +90,6 @@ export default function CalificacionesPage() {
         setLoading(false)
       }
     }
-
     loadUser()
   }, [])
 
@@ -84,20 +108,10 @@ export default function CalificacionesPage() {
 
   const loadRatingPendingEvents = async () => {
     try {
-      // Usar la misma API que el dashboard para eventos completados
-      const response = await fetch('/api/dashboard/events', {
-        credentials: 'include'
-      })
-      
+      const response = await fetch('/api/dashboard/events', { credentials: 'include' })
       if (response.ok) {
         const data = await response.json()
-        console.log("📊 Dashboard events API response:", data)
-        
-        // Filtrar solo eventos COMPLETED que necesitan calificación
         const completedEvents = data.events?.filter((event: any) => event.status === 'COMPLETED') || []
-        console.log("📊 Completed events:", completedEvents)
-        
-        // Transformar a la estructura esperada
         const eventsData = completedEvents.map((event: any) => ({
           id: event.id,
           event: {
@@ -117,17 +131,15 @@ export default function CalificacionesPage() {
           status: 'COMPLETED',
           volunteerId: user?.id || ''
         }))
-        
-        console.log("📊 Transformed events:", eventsData)
+
         setEvents(eventsData)
-        
-        // Si hay un eventId en la URL, abrir el modal automáticamente
+
         if (eventIdFromUrl) {
           const eventToRate = eventsData.find((e: RatingPendingEvent) => e.event.id === eventIdFromUrl)
           if (eventToRate) {
             setSelectedEvent(eventToRate)
             setShowRatingModal(true)
-            setEventIdFromUrl(null) // Limpiar para evitar re-apertura
+            setEventIdFromUrl(null)
           }
         }
       }
@@ -144,141 +156,113 @@ export default function CalificacionesPage() {
   const handleRatingComplete = () => {
     setShowRatingModal(false)
     setSelectedEvent(null)
-    // Recargar la lista de eventos
     loadRatingPendingEvents()
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando calificaciones...</p>
-        </div>
-      </div>
-    )
+    return <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-purple-50"><div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Acceso Denegado</h1>
-          <p className="text-gray-600 mb-6">Debes iniciar sesión para ver tus calificaciones</p>
-          <Link href="/login">
-            <Button>Iniciar Sesión</Button>
-          </Link>
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
+          <h1 className="text-2xl font-bold mb-2">Acceso Denegado</h1>
+          <p className="text-gray-600 mb-4">Debes iniciar sesión para continuar</p>
+          <Link href="/login"><Button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">Iniciar Sesión</Button></Link>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  <span>Volver al Dashboard</span>
-                </Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex flex-col">
+      {/* HEADER SUPERIOR */}
+      <div className="sticky top-0 z-30 bg-white shadow-md border-b">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Heart className="h-8 w-8 text-blue-600 fill-blue-200" />
+            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">VolunNet</span>
+          </div>
+          <div className="flex-1 mx-8 max-w-xl">
+            <input type="text" placeholder="Buscar eventos, iglesias..." className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:ring-2 focus:ring-blue-200 bg-gray-50 shadow-sm" />
+          </div>
+          <div className="flex items-center gap-6">
+            <nav className="flex gap-2 text-gray-600 text-sm font-medium">
+              <Link href="/dashboard" className="flex items-center gap-1 px-3 py-1 rounded-lg hover:text-blue-700 hover:bg-blue-50">
+                <Home className="h-5 w-5" /> Inicio
               </Link>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2">
-                <Star className="h-6 w-6 text-yellow-600" />
-                <h1 className="text-xl font-bold text-gray-900">Calificaciones</h1>
-              </div>
-            </div>
+              <Link href="/eventos/buscar" className="flex items-center gap-1 px-3 py-1 rounded-lg hover:text-blue-50 hover:text-blue-700">
+                <Calendar className="h-5 w-5" /> Eventos
+              </Link>
+              <Link href="/comunidad" className="flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-blue-50 hover:text-blue-700">
+                <Users className="h-5 w-5" /> Comunidad
+              </Link>
+              <Link href="/notificaciones" className="flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-blue-50 hover:text-blue-700">
+                <Bell className="h-5 w-5" /> Notificaciones
+              </Link>
+            </nav>
+            <UserMenu user={user} />
           </div>
         </div>
       </div>
 
-      {/* Contenido Principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Eventos Pendientes de Calificación</h2>
-          <p className="text-gray-600">
-            Califica los eventos en los que has participado para ayudar a la comunidad
-          </p>
-        </div>
+      {/* CONTENIDO CENTRADO */}
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10">
+        <div className="w-full max-w-5xl text-center">
+          <motion.h2
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-bold mb-8 flex items-center justify-center gap-3 text-gray-900"
+          >
+            <Star className="h-8 w-8 text-yellow-500" /> Calificaciones
+          </motion.h2>
 
-        {events.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
+          {events.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100 mx-auto max-w-xl"
+            >
               <Star className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No hay eventos pendientes de calificación</h3>
-              <p className="text-gray-600 mb-6">
-                Los eventos completados aparecerán aquí para que puedas calificarlos
-              </p>
-              <Link href="/dashboard">
-                <Button>Volver al Dashboard</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {events.map((eventItem) => (
-              <Card key={eventItem.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
-                      {eventItem.event.title}
-                    </CardTitle>
-                    <Badge variant="secondary" className="ml-2">
-                      {eventItem.event.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <span>{eventItem.event.organization.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {new Date(eventItem.event.startDate).toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{eventItem.event.city}, {eventItem.event.state}</span>
-                    </div>
-                  </div>
-                  
-                  <p className="text-sm text-gray-700 line-clamp-3">
-                    {eventItem.event.description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between pt-2">
-                    <Badge variant="outline" className="text-yellow-700 border-yellow-300">
-                      Pendiente de calificación
-                    </Badge>
-                    <Button 
-                      onClick={() => handleRateEvent(eventItem)}
-                      className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-                    >
-                      <Star className="h-4 w-4 mr-2" />
-                      Calificar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay eventos pendientes de calificación</h3>
+              <p className="text-gray-600 mb-6">Los eventos completados aparecerán aquí para calificarlos</p>
+              <Link href="/dashboard"><Button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">Volver al Dashboard</Button></Link>
+            </motion.div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 justify-center">
+              {events.map((eventItem, idx) => (
+                <motion.div
+                  key={eventItem.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                >
+                  <Card className="hover:shadow-xl transition-shadow rounded-2xl overflow-hidden border border-gray-100">
+                    <CardHeader className="bg-gradient-to-r from-yellow-50 to-orange-50">
+                      <CardTitle className="text-lg font-semibold text-gray-900">{eventItem.event.title}</CardTitle>
+                      <Badge variant="outline" className="text-yellow-700 border-yellow-300">{eventItem.event.status}</Badge>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="text-sm text-gray-600 space-y-2">
+                        <div className="flex items-center gap-2"><Users className="h-4 w-4" /> {eventItem.event.organization.name}</div>
+                        <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {new Date(eventItem.event.startDate).toLocaleDateString('es-ES')}</div>
+                        <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {eventItem.event.city}, {eventItem.event.state}</div>
+                      </div>
+                      <p className="text-sm text-gray-700 line-clamp-3">{eventItem.event.description}</p>
+                      <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold" onClick={() => handleRateEvent(eventItem)}>
+                        <Star className="h-4 w-4 mr-2" /> Calificar
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Modal de Calificación */}
+      {/* MODAL DE CALIFICACIÓN */}
       {showRatingModal && selectedEvent && (
         <RatingModal
           isOpen={showRatingModal}
@@ -296,24 +280,17 @@ export default function CalificacionesPage() {
           }}
           onSubmit={async (rating, feedback) => {
             try {
-              console.log("📤 Submitting rating for event:", selectedEvent.event.id)
-              console.log("📤 Rating data:", { rating, feedback })
-              
               const response = await fetch(`/api/events/${selectedEvent.event.id}/rate`, {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  volunteerId: user.id, // El voluntario que está calificando
+                  volunteerId: user.id,
                   rating,
                   comment: feedback,
-                  type: 'VOLUNTEER_TO_ORGANIZATION' // Tipo de calificación
+                  type: 'VOLUNTEER_TO_ORGANIZATION'
                 })
               })
-              
               if (response.ok) {
-                console.log("✅ Rating submitted successfully")
                 handleRatingComplete()
               } else {
                 const errorText = await response.text()

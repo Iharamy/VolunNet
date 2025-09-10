@@ -290,7 +290,7 @@ export default function EditarEventoPage({ params }: { params: { id: string } })
                     <div className="text-xs text-gray-500">{user?.email || 'usuario@volunnet.com'}</div>
                   </div>
                   <Link
-                    href="/perfil"
+                    href="/organizaciones/perfil"
                     className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
                   >
                     <User className="h-4 w-4 text-gray-500" />

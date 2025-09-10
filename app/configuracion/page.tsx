@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 "use client"
 
 import { useEffect, useState } from "react"
@@ -1084,7 +1083,7 @@ export default function ConfiguracionPage() {
       </div>
     </div>
   )
-=======
+
 import Link from "next/link";
 import { Settings } from "lucide-react";
 
@@ -1101,5 +1100,4 @@ export default function ConfiguracionPage() {
       </div>
     </div>
   );
->>>>>>> ec1cbbc69193834a0a8ca358b8538c352ee8b7bb
 } 

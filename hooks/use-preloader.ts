@@ -154,26 +154,16 @@ export function usePreloader() {
           case "/notificaciones":
             data = await preloadNotificationsData()
             break
-<<<<<<< HEAD
-            default:
-              // Para rutas dinámicas como /eventos/[id]
-              if (route.startsWith("/eventos/")) {
-                const eventId = route.split("/")[2]
-                // Evitar precargar en la ruta de creación
-                if (eventId && eventId !== "crear") {
-                  data = await preloadEventDetailsData(eventId)
-                }
-              }
-              break
-=======
           default:
             // Para rutas dinámicas como /eventos/[id]
             if (route.startsWith("/eventos/")) {
               const eventId = route.split("/")[2]
-              data = await preloadEventDetailsData(eventId)
+              // Evitar precargar en la ruta de creación
+              if (eventId && eventId !== "crear") {
+                data = await preloadEventDetailsData(eventId)
+              }
             }
             break
->>>>>>> ec1cbbc69193834a0a8ca358b8538c352ee8b7bb
         }
 
         if (data) {
@@ -279,15 +269,9 @@ export function usePreloader() {
 // Funciones de precarga específicas para cada ruta
 async function preloadDashboardData() {
   const [stats, events, notifications] = await Promise.all([
-    fetch("/api/dashboard/stats")
-      .then((r) => r.json())
-      .catch(() => null),
-    fetch("/api/dashboard/events")
-      .then((r) => r.json())
-      .catch(() => null),
-    fetch("/api/dashboard/notifications")
-      .then((r) => r.json())
-      .catch(() => null),
+    fetch("/api/dashboard/stats").then((r) => r.json()).catch(() => null),
+    fetch("/api/dashboard/events").then((r) => r.json()).catch(() => null),
+    fetch("/api/dashboard/notifications").then((r) => r.json()).catch(() => null),
   ])
 
   return { stats, events, notifications }
@@ -295,19 +279,9 @@ async function preloadDashboardData() {
 
 async function preloadEventsData() {
   const [categories, popular, events] = await Promise.all([
-    fetch("/api/events/categories")
-      .then((r) => r.json())
-      .catch(() => null),
-    fetch("/api/events/popular")
-      .then((r) => r.json())
-      .catch(() => null),
-<<<<<<< HEAD
-    fetch("/api/events/buscar?limit=12")
-=======
-    fetch("/api/events/search?limit=12")
->>>>>>> ec1cbbc69193834a0a8ca358b8538c352ee8b7bb
-      .then((r) => r.json())
-      .catch(() => null),
+    fetch("/api/events/categories").then((r) => r.json()).catch(() => null),
+    fetch("/api/events/popular").then((r) => r.json()).catch(() => null),
+    fetch("/api/events/buscar?limit=12").then((r) => r.json()).catch(() => null),
   ])
 
   return { categories, popular, events }
@@ -315,12 +289,8 @@ async function preloadEventsData() {
 
 async function preloadProfileData() {
   const [profile, stats] = await Promise.all([
-    fetch("/api/profile")
-      .then((r) => r.json())
-      .catch(() => null),
-    fetch("/api/profile/stats")
-      .then((r) => r.json())
-      .catch(() => null),
+    fetch("/api/profile").then((r) => r.json()).catch(() => null),
+    fetch("/api/profile/stats").then((r) => r.json()).catch(() => null),
   ])
 
   return { profile, stats }
@@ -336,12 +306,8 @@ async function preloadNotificationsData() {
 
 async function preloadEventDetailsData(eventId: string) {
   const [event, similar] = await Promise.all([
-    fetch(`/api/events/${eventId}`)
-      .then((r) => r.json())
-      .catch(() => null),
-    fetch(`/api/events/${eventId}/similar`)
-      .then((r) => r.json())
-      .catch(() => null),
+    fetch(`/api/events/${eventId}`).then((r) => r.json()).catch(() => null),
+    fetch(`/api/events/${eventId}/similar`).then((r) => r.json()).catch(() => null),
   ])
 
   return { event, similar }

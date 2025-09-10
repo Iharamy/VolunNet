@@ -182,11 +182,6 @@ export default function PerfilOrganizador() {
                   <span>Inicio</span>
                   <span className="absolute left-0 -bottom-0.5 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full rounded-full"></span>
                 </Link>
-                <Link href="/eventos" className="flex items-center gap-1 px-3 py-1 rounded-lg hover:text-blue-700 hover:bg-blue-50 transition group relative">
-                  <Calendar className="h-5 w-5 group-hover:text-blue-700 transition" />
-                  <span>Eventos</span>
-                  <span className="absolute left-0 -bottom-0.5 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full rounded-full"></span>
-                </Link>
                 <Link href="/comunidad" className="flex items-center gap-1 px-3 py-1 rounded-lg hover:text-blue-700 hover:bg-blue-50 transition group relative">
                   <Users className="h-5 w-5 group-hover:text-blue-700 transition" />
                   <span>Comunidad</span>

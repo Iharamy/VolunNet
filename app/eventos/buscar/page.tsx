@@ -17,7 +17,7 @@ import { getCurrentUser } from "@/app/auth/actions"
 import Link from "next/link"
 import { ApplicationStatusBadge } from "@/components/ui/application-status-badge"
 
-// Funciones auxiliares globales
+// Funciones auxiliares
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("es-ES", {
     weekday: "long",
@@ -113,21 +113,16 @@ export default function EventSearchPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
 
   useEffect(() => {
-    console.log("🔍 useEffect ejecutándose - cargando datos iniciales")
     loadUser()
     fetchEvents()
   }, [])
-
-  
 
   const loadUser = async () => {
     try {
       setUserLoading(true)
       const currentUser = await getCurrentUser()
-      console.log("🔍 Usuario cargado:", currentUser)
       setUser(currentUser)
     } catch (error) {
-      console.error("Error loading user:", error)
       setUser(null)
     } finally {
       setUserLoading(false)
@@ -137,7 +132,6 @@ export default function EventSearchPage() {
   const fetchEvents = async () => {
     try {
       setLoading(true)
-      
       const params = new URLSearchParams()
       if (filters.query) params.append("query", filters.query)
       if (filters.city) params.append("city", filters.city)
@@ -150,64 +144,31 @@ export default function EventSearchPage() {
       if (response.ok) {
         let data = await response.json()
         
-        console.log("🔍 Respuesta de la API eventos:", data)
-        console.log("🔍 Tipo de data:", typeof data)
-        console.log("🔍 Es array:", Array.isArray(data))
-        
-        // Verificar que data sea un array
         if (!Array.isArray(data)) {
-          console.error("❌ Error: data no es un array:", data)
-          // Intentar extraer eventos del objeto si existe
           if (data && typeof data === 'object' && data.events && Array.isArray(data.events)) {
             data = data.events
-            console.log("✅ Eventos extraídos del objeto:", data)
           } else if (data && typeof data === 'object' && data.data && Array.isArray(data.data)) {
             data = data.data
-            console.log("✅ Eventos extraídos de data.data:", data)
           } else {
-            console.error("❌ No se pudieron extraer eventos de la respuesta")
             setEvents([])
             return
           }
         }
-        
-        console.log("🔍 Eventos antes de filtros:", data.length)
-        
-        // Aplicar filtros adicionales del cliente
-        if (filters.onlyVerified) {
-          data = data.filter((event: Event) => event.organization_verified)
-        }
-        if (filters.onlyAvailable) {
-          data = data.filter((event: Event) => event.currentVolunteers < event.maxVolunteers)
-        }
-        if (filters.category && filters.category !== "all") {
-          data = data.filter((event: Event) => event.category_name === filters.category)
-        }
-        if (filters.skills.length > 0) {
-          data = data.filter((event: Event) => 
-            filters.skills.some(skill => event.skills.includes(skill))
-          )
-        }
 
-        console.log("🔍 Eventos después de filtros:", data.length)
+        if (filters.onlyVerified) data = data.filter((event: Event) => event.organization_verified)
+        if (filters.onlyAvailable) data = data.filter((event: Event) => event.currentVolunteers < event.maxVolunteers)
+        if (filters.category && filters.category !== "all") data = data.filter((event: Event) => event.category_name === filters.category)
+        if (filters.skills.length > 0) data = data.filter((event: Event) => filters.skills.some(skill => event.skills.includes(skill)))
 
-        // Aplicar ordenamiento
         data.sort((a: Event, b: Event) => {
           switch (sortBy) {
-            case "date":
-              return new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-            case "volunteers":
-              return b.currentVolunteers - a.currentVolunteers
-            case "title":
-              return a.title.localeCompare(b.title)
-            default:
-              return 0
+            case "date": return new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+            case "volunteers": return b.currentVolunteers - a.currentVolunteers
+            case "title": return a.title.localeCompare(b.title)
+            default: return 0
           }
         })
 
-        console.log("🔍 Eventos finales:", data.length)
-        
-        // Verificar el estado de postulación para cada evento
         const eventsWithApplicationStatus = await Promise.all(
           data.map(async (event: Event) => {
             try {
@@ -220,9 +181,7 @@ export default function EventSearchPage() {
                   applicationStatus: checkData.application?.status
                 }
               }
-            } catch (error) {
-              console.warn(`Error checking application status for event ${event.id}:`, error)
-            }
+            } catch (error) {}
             return event
           })
         )
@@ -236,16 +195,14 @@ export default function EventSearchPage() {
     }
   }
 
-     const handleApply = async (event: Event) => {
-     if (!user) {
-       alert("Debes iniciar sesión para postularte a eventos")
-       return
-     }
-
-     // Abrir modal de confirmación
-     setSelectedEvent({ ...event, alreadyRegistered: false })
-     setShowConfirmModal(true)
-   }
+  const handleApply = async (event: Event) => {
+    if (!user) {
+      alert("Debes iniciar sesión para postularte a eventos")
+      return
+    }
+    setSelectedEvent({ ...event, alreadyRegistered: false })
+    setShowConfirmModal(true)
+  }
 
   const confirmApplication = async () => {
     if (!selectedEvent) return
@@ -260,7 +217,6 @@ export default function EventSearchPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Actualizar el estado local para mostrar que se aplicó
         setEvents(prev => prev.map(e =>
           e.id === selectedEvent.id
             ? { 
@@ -271,15 +227,11 @@ export default function EventSearchPage() {
               }
             : e
         ))
-        
-        // Mostrar mensaje apropiado según el estado
         if (data.status === 'ACCEPTED') {
           alert("¡Felicidades! Has sido aceptado al evento")
         } else {
           alert("Postulación enviada exitosamente. Estás en lista de espera.")
         }
-        
-        // Cerrar modal
         setShowConfirmModal(false)
         setSelectedEvent(null)
       } else {
@@ -288,22 +240,16 @@ export default function EventSearchPage() {
         } else {
           alert(data.error || "Error al postularse al evento")
         }
-        // Cerrar modal en caso de error
         setShowConfirmModal(false)
         setSelectedEvent(null)
       }
     } catch (error) {
       console.error("Error applying to event:", error)
       alert("Error al postularse al evento")
-      // Cerrar modal en caso de error
       setShowConfirmModal(false)
       setSelectedEvent(null)
     }
   }
-
-
-
-
 
   if (loading) {
     return (
@@ -320,18 +266,12 @@ export default function EventSearchPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Header con navegación como el dashboard */}
+      {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-blue-100/50 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo y navegación izquierda */}
             <div className="flex items-center space-x-8">
-              <Link href="/dashboard" className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition">
-                <ArrowLeft className="h-5 w-5" />
-                <span className="font-medium">Volver al Dashboard</span>
-              </Link>
-              
-              <div className="flex items-center space-x-2">
+               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Heart className="h-5 w-5 text-white" />
                 </div>
@@ -341,7 +281,6 @@ export default function EventSearchPage() {
               </div>
             </div>
 
-            {/* Navegación central */}
             <nav className="hidden md:flex items-center space-x-8">
               <Link href="/dashboard" className="text-gray-600 hover:text-blue-600 transition flex items-center space-x-2">
                 <Home className="h-4 w-4" />
@@ -357,17 +296,16 @@ export default function EventSearchPage() {
               </Link>
             </nav>
 
-            {/* Usuario y acciones derecha */}
             <div className="flex items-center space-x-4">
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2 bg-white/50 hover:bg-white/80 border-blue-200"
+                className="flex items-center space-x-2 bg-white/50 hover:bg-white/80 border-blue-200 md:hidden"
               >
                 <Filter className="h-4 w-4" />
                 <span>Filtros</span>
               </Button>
-              
+
               <div className="flex items-center space-x-2 border border-blue-200 rounded-lg p-1 bg-white/50">
                 <Button
                   variant={viewMode === "grid" ? "default" : "ghost"}
@@ -387,28 +325,28 @@ export default function EventSearchPage() {
                 </Button>
               </div>
 
-                             {userLoading ? (
-                 <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                   <div className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                 </div>
-               ) : user ? (
-                 <div className="flex items-center space-x-3">
-                   <Link href="/notificaciones" className="relative p-2 text-gray-600 hover:text-blue-600 transition">
-                     <Bell className="h-5 w-5" />
-                     <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-                   </Link>
-                   <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                     {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
-                   </div>
-                 </div>
-               ) : (
-                 <Link href="/login" className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition">
-                   <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-sm">
-                     <Users className="h-4 w-4" />
-                   </div>
-                   <span className="hidden sm:block text-sm font-medium">Iniciar Sesión</span>
-                 </Link>
-               )}
+              {userLoading ? (
+                <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                  <div className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : user ? (
+                <div className="flex items-center space-x-3">
+                  <Link href="/notificaciones" className="relative p-2 text-gray-600 hover:text-blue-600 transition">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                  </Link>
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                    {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                </div>
+              ) : (
+                <Link href="/login" className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition">
+                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-sm">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium">Iniciar Sesión</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -416,7 +354,6 @@ export default function EventSearchPage() {
 
       {/* Contenido principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Título y descripción */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Buscar Eventos</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -424,7 +361,7 @@ export default function EventSearchPage() {
           </p>
         </div>
 
-        {/* Barra de búsqueda mejorada */}
+        {/* Barra de búsqueda */}
         <div className="mb-8">
           <div className="relative max-w-3xl mx-auto">
             <div className="relative">
@@ -443,395 +380,196 @@ export default function EventSearchPage() {
                 Buscar
               </Button>
             </div>
-            
-            {/* Contador de eventos */}
+
             <div className="mt-4 text-center">
-              <span className="text-gray-600 font-medium">
-                {events.length} eventos encontrados
-              </span>
+              <span className="text-gray-600 font-medium">{events.length} eventos encontrados</span>
             </div>
           </div>
         </div>
 
-        {/* Panel de filtros mejorado */}
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="mb-8 bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-blue-100/50 p-8"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div>
-                <Label htmlFor="city">Ciudad</Label>
-                <Input
-                  id="city"
-                  placeholder="Ciudad"
-                  value={filters.city}
-                  onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">Estado</Label>
-                <Input
-                  id="state"
-                  placeholder="Estado"
-                  value={filters.state}
-                  onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Categoría</Label>
-                                 <Select value={filters.category} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
-                   <SelectTrigger>
-                     <SelectValue placeholder="Seleccionar categoría" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     <SelectItem value="all">Todas las categorías</SelectItem>
-                     <SelectItem value="Medio Ambiente">Medio Ambiente</SelectItem>
-                     <SelectItem value="Educación">Educación</SelectItem>
-                     <SelectItem value="Salud">Salud</SelectItem>
-                     <SelectItem value="Alimentación">Alimentación</SelectItem>
-                     <SelectItem value="Arte y Cultura">Arte y Cultura</SelectItem>
-                   </SelectContent>
-                 </Select>
-              </div>
-              <div>
-                <Label htmlFor="sort">Ordenar por</Label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date">Fecha</SelectItem>
-                    <SelectItem value="volunteers">Voluntarios</SelectItem>
-                    <SelectItem value="title">Título</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="mt-6 flex flex-wrap items-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="verified"
-                  checked={filters.onlyVerified}
-                  onCheckedChange={(checked) => setFilters(prev => ({ ...prev, onlyVerified: !!checked }))}
-                />
-                <Label htmlFor="verified">Solo organizaciones verificadas</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="available"
-                  checked={filters.onlyAvailable}
-                  onCheckedChange={(checked) => setFilters(prev => ({ ...prev, onlyAvailable: !!checked }))}
-                />
-                <Label htmlFor="available">Solo eventos con espacios disponibles</Label>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <Button onClick={fetchEvents} className="bg-purple-600 hover:bg-purple-700">
-                Aplicar Filtros
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Results Count */}
-        <div className="mb-6 flex items-center justify-between">
-          <p className="text-gray-600">
-            {events.length} evento{events.length !== 1 ? 's' : ''} encontrado{events.length !== 1 ? 's' : ''}
-          </p>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500">Vista:</span>
-            <div className="flex items-center space-x-1 border rounded-lg p-1">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Events Grid/List */}
-        {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} onApply={handleApply} user={user} />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {events.map((event) => (
-              <EventListCard key={event.id} event={event} onApply={handleApply} user={user} />
-            ))}
-          </div>
-        )}
-
-        {events.length === 0 && !loading && (
-          <div className="text-center py-20">
-            <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron eventos</h3>
-            <p className="text-gray-600">Intenta ajustar tus filtros de búsqueda</p>
-          </div>
-                 )}
-       </div>
-
-                                               {/* Modal de Confirmación */}
-        {/* Modal de Confirmación Mejorado */}
-        {showConfirmModal && selectedEvent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6"
+        {/* Layout principal */}
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar filtros */}
+          <aside className={`lg:w-1/4 ${showFilters ? "block" : "hidden"} md:block`}>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-blue-100/50 p-6 mb-6 lg:mb-0 sticky top-24"
             >
-              {/* Header */}
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                  <span className="text-white text-2xl">🎯</span>
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <Label htmlFor="city">Ciudad</Label>
+                  <Input
+                    id="city"
+                    placeholder="Ciudad"
+                    value={filters.city}
+                    onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
+                  />
                 </div>
-                
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  Confirmar Postulación
-                </h3>
-                
-                <p className="text-gray-600 text-sm">
-                  ¿Estás seguro de que quieres postularte a este evento?
-                </p>
-              </div>
-
-              {/* Detalles del evento */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-gray-900 mb-2">{selectedEvent.title}</h4>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-500">📅</span>
-                    <span>{formatDate(selectedEvent.startDate)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-500">📍</span>
-                    <span>{selectedEvent.city}, {selectedEvent.state}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-500">👥</span>
-                    <span>{selectedEvent.currentVolunteers}/{selectedEvent.maxVolunteers} voluntarios</span>
-                  </div>
+                <div>
+                  <Label htmlFor="state">Estado</Label>
+                  <Input
+                    id="state"
+                    placeholder="Estado"
+                    value={filters.state}
+                    onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value }))}
+                  />
                 </div>
-              </div>
+                <div>
+                  <Label htmlFor="category">Categoría</Label>
+                  <Select value={filters.category} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las categorías</SelectItem>
+                      <SelectItem value="Medio Ambiente">Medio Ambiente</SelectItem>
+                      <SelectItem value="Educación">Educación</SelectItem>
+                      <SelectItem value="Salud">Salud</SelectItem>
+                      <SelectItem value="Alimentación">Alimentación</SelectItem>
+                      <SelectItem value="Arte y Cultura">Arte y Cultura</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Botones de acción */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowConfirmModal(false)
-                    setSelectedEvent(null)
-                  }}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 px-4 rounded-lg font-semibold transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmApplication}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-4 rounded-lg font-semibold transition"
-                >
-                  Confirmar
-                </button>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="verified"
+                    checked={filters.onlyVerified}
+                    onCheckedChange={(checked) => setFilters(prev => ({ ...prev, onlyVerified: !!checked }))}
+                  />
+                  <Label htmlFor="verified">Solo organizaciones verificadas</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="available"
+                    checked={filters.onlyAvailable}
+                    onCheckedChange={(checked) => setFilters(prev => ({ ...prev, onlyAvailable: !!checked }))}
+                  />
+                  <Label htmlFor="available">Solo eventos con espacios disponibles</Label>
+                </div>
+
+                <div className="mt-4">
+                  <Button onClick={fetchEvents} className="w-full bg-purple-600 hover:bg-purple-700">
+                    Aplicar Filtros
+                  </Button>
+                </div>
               </div>
             </motion.div>
+          </aside>
+
+          {/* Contenido eventos */}
+          <main className="flex-1">
+            {events.length === 0 && !loading ? (
+              <div className="text-center py-20">
+                <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron eventos</h3>
+                <p className="text-gray-600">Intenta ajustar tus filtros de búsqueda</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {events.map(event => (
+  <motion.div
+    key={event.id}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+    className="group"
+  >
+    <Card className="overflow-hidden shadow-2xl rounded-3xl flex flex-col h-full hover:scale-105 transform transition-transform duration-300 bg-white">
+      {/* Imagen con overlay y zoom */}
+      <div className="relative h-56 w-full overflow-hidden rounded-t-3xl">
+        {event.imageUrl ? (
+          <img
+            src={event.imageUrl}
+            alt={event.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+        ) : (
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+            <Calendar className="h-16 w-16 text-gray-400" />
           </div>
         )}
-     </div>
-   )
- }
 
-function EventCard({ event, onApply, user }: { event: Event; onApply: (event: Event) => void; user: any }) {
-  const availability = getAvailabilityStatus(event)
-  
-  return (
-    <motion.div
-      whileHover={{ y: -4, scale: 1.02 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Card className="h-full bg-white/80 backdrop-blur-sm border border-blue-100/50 hover:shadow-xl hover:border-blue-200/50 transition-all duration-300 rounded-2xl overflow-hidden">
-        <CardHeader className="pb-3 bg-gradient-to-r from-blue-50/50 to-purple-50/50">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-3">
-                <Badge className={`${event.category_color} px-3 py-1 rounded-full text-sm font-medium shadow-sm`}>
-                  {event.category_icon} {event.category_name}
-                </Badge>
-                {event.organization_verified && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium shadow-sm">
-                    <Star className="h-3 w-3 mr-1" />
-                    Verificada
-                  </Badge>
-                )}
-              </div>
-              <CardTitle className="text-xl font-bold text-gray-900 line-clamp-2 leading-tight">{event.title}</CardTitle>
-              <CardDescription className="line-clamp-2 mt-3 text-gray-600 text-sm leading-relaxed">
-                {event.description}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="pt-4">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3 text-sm text-gray-600">
-              <MapPin className="h-4 w-4 text-blue-500" />
-              <span className="font-medium">{event.address}, {event.city}</span>
-            </div>
-          
-          <div className="flex items-center space-x-3 text-sm text-gray-600">
-            <Calendar className="h-4 w-4 text-purple-500" />
-            <span className="font-medium">{formatDate(event.startDate)}</span>
-          </div>
-          
-          <div className="flex items-center space-x-3 text-sm text-gray-600">
-            <Users className="h-4 w-4 text-green-500" />
-            <span className="font-medium">{event.currentVolunteers}/{event.maxVolunteers} voluntarios</span>
-          </div>
-
-          <div className="flex items-center space-x-3 text-sm text-gray-600">
-            <Building2 className="h-4 w-4 text-blue-500" />
-            <span className="font-medium">{event.organization_name}</span>
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <Badge className={`${availability.color} px-3 py-1 rounded-full text-sm font-medium shadow-sm`}>
-                {availability.text}
-              </Badge>
-              <ApplicationStatusBadge 
-                hasApplied={event.hasApplied}
-                status={event.applicationStatus}
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              {!event.hasApplied && (
-                <Button
-                  onClick={() => {
-                    console.log("🔍 Botón Postular clickeado para:", event.title)
-                    console.log("🔍 Evento completo:", event)
-                    onApply(event)
-                  }}
-                  disabled={event.currentVolunteers >= event.maxVolunteers}
-                  size="sm"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-semibold shadow-lg transition-all duration-200 hover:shadow-xl"
-                >
-                  {event.currentVolunteers >= event.maxVolunteers ? "Completo" : "Postular"}
-                </Button>
-              )}
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="rounded-lg px-4 py-2 font-semibold border-gray-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all"
-                onClick={() => window.location.href = `/eventos/${event.id}`}
-              >
-                Ver detalles
-              </Button>
-            </div>
-          </div>
+        {/* Badges flotantes */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2">
+          <span className="px-3 py-1 rounded-full text-white text-xs font-semibold shadow" style={{ backgroundColor: event.category_color }}>
+            {event.category_name}
+          </span>
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow ${getAvailabilityStatus(event).color}`}>
+            {getAvailabilityStatus(event).text}
+          </span>
         </div>
+
+        <div className="absolute top-3 right-3 flex flex-col gap-2">
+          <Badge variant="secondary">{event.city}</Badge>
+          <Badge variant="secondary">{event.state}</Badge>
+        </div>
+
+        {/* Overlay con info adicional al hover */}
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+          <p className="text-white font-bold">{event.organization_name}</p>
+          <p className="text-gray-200 text-sm">{formatDate(event.startDate)}</p>
+        </div>
+      </div>
+
+      {/* Contenido */}
+      <CardContent className="flex flex-col flex-1 p-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2 line-clamp-2">{event.title}</h3>
+        <p className="text-gray-600 mb-4 line-clamp-3">{event.description}</p>
+
+        {/* Barra de progreso de plazas */}
+        <div className="mb-4">
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-2 bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-500"
+              style={{ width: `${Math.min(100, (event.currentVolunteers / event.maxVolunteers) * 100)}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {event.currentVolunteers} de {event.maxVolunteers} plazas ocupadas
+          </p>
+        </div>
+
+        <Button
+          onClick={() => handleApply(event)}
+          disabled={event.hasApplied || getAvailabilityStatus(event).text === "Completo"}
+          className={`mt-auto w-full py-2 font-semibold rounded-xl shadow-lg
+            ${event.hasApplied 
+              ? "bg-gray-400 cursor-not-allowed text-white"
+              : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"}`
+          }
+        >
+          {event.hasApplied ? "Postulado" : "Aplicar"}
+        </Button>
       </CardContent>
     </Card>
-    </motion.div>
+  </motion.div>
+))}
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+
+      {/* Modal de confirmación */}
+      {showConfirmModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl p-8 max-w-md w-full"
+          >
+            <h3 className="text-xl font-bold mb-4">Confirmar aplicación</h3>
+            <p className="mb-6">¿Deseas postularte al evento <strong>{selectedEvent.title}</strong>?</p>
+            <div className="flex justify-end space-x-4">
+              <Button onClick={() => { setShowConfirmModal(false); setSelectedEvent(null); }}>Cancelar</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={confirmApplication}>Confirmar</Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </div>
   )
 }
-
-function EventListCard({ event, onApply, user }: { event: Event; onApply: (event: Event) => void; user: any }) {
-  const availability = getAvailabilityStatus(event)
-  
-  return (
-    <Card className="hover:shadow-md transition-shadow duration-200">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-3">
-              <Badge className={event.category_color}>
-                {event.category_icon} {event.category_name}
-              </Badge>
-              {event.organization_verified && (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                  <Star className="h-3 w-3 mr-1" />
-                  Verificada
-                </Badge>
-              )}
-              <Badge className={availability.color}>
-                {availability.text}
-              </Badge>
-            </div>
-            
-            <h3 className="text-xl font-semibold mb-2">{event.title}</h3>
-            <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-              <div className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4" />
-                <span>{event.city}, {event.state}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4" />
-                <span>{getTimeUntilEvent(event.startDate)}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4" />
-                <span>{event.currentVolunteers}/{event.maxVolunteers}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Building2 className="h-4 w-4" />
-                <span>{event.organization_name}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="ml-6 flex flex-col items-end space-y-3">
-            <div className="flex items-center gap-2">
-              <ApplicationStatusBadge 
-                hasApplied={event.hasApplied}
-                status={event.applicationStatus}
-              />
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              {!event.hasApplied && (
-                <Button
-                  onClick={() => {
-                    console.log("🔍 Botón Postular clickeado para:", event.title)
-                    console.log("🔍 Evento completo:", event)
-                    onApply(event)
-                  }}
-                  disabled={event.currentVolunteers >= event.maxVolunteers}
-                  className="bg-purple-700 hover:bg-purple-800"
-                >
-                  Postular
-                </Button>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.location.href = `/eventos/${event.id}`}
-              >
-                Ver Detalles
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-} 
